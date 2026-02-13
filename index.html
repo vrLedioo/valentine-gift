@@ -393,6 +393,7 @@
         }
 
         #letter-modal.active {
+            display: flex;
             background: rgba(0, 0, 0, 0.85);
             backdrop-filter: blur(12px);
             opacity: 1;
@@ -693,43 +694,6 @@
         }
 
         let particleSystem;
-
-        // ========================================
-        // 3D CARD TILT EFFECT
-        // ========================================
-        const cardWrapper = document.querySelector('.card-wrapper');
-        const card = document.getElementById('main-card');
-
-        document.addEventListener('mousemove', (e) => {
-            if (!card.classList.contains('visible')) return;
-            
-            const rect = cardWrapper.getBoundingClientRect();
-            const x = e.clientX - rect.left - rect.width / 2;
-            const y = e.clientY - rect.top - rect.height / 2;
-            
-            const rotateX = (y / rect.height) * 15;
-            const rotateY = -(x / rect.width) * 15;
-            
-            cardWrapper.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
-        });
-
-        document.addEventListener('mouseleave', () => {
-            cardWrapper.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg)';
-        });
-
-        // Device orientation for mobile
-        if (typeof DeviceOrientationEvent !== 'undefined') {
-            window.addEventListener('deviceorientation', (event) => {
-                const alpha = event.alpha; // Z
-                const beta = event.beta;   // X
-                const gamma = event.gamma; // Y
-
-                const rotateX = (beta / 90) * 20;
-                const rotateY = -(gamma / 90) * 20;
-                
-                cardWrapper.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
-            });
-        }
 
         // ========================================
         // 3D CAROUSEL / SWIPE
