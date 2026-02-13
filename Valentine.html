@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>For Riga ❤️</title>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #ff4d6d;
+            --bg-dark: #0f172a;
+            --glass: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --accent: #ff8fa3;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            color: white;
+            position: relative;
+            perspective: 1200px;
+        }
+
+        /* --- CANVAS BACKGROUND & PARTICLES --- */
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            z-index: 1;
+        }
+
+        .bg-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.7) 0%, rgba(30, 27, 75, 0.7) 50%, rgba(49, 46, 129, 0.7) 100%);
+            backdrop-filter: blur(8px);
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        /* --- NOISE TEXTURE --- */
+        .noise-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.03;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" seed="2" /></filter><rect width="100%" height="100%" filter="url(%23noise)" opacity="1"/></svg>');
+            z-index: 3;
+            pointer-events: none;
+        }
+
+        /* --- CONTAINER --- */
+        .scene-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            perspective: 1000px;
+        }
+
+        /* --- INTRO SCREEN --- */
+        #intro-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #000;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 1s ease, transform 0.8s ease;
+        }
+
+        #intro-screen.hidden {
+            opacity: 0;
+            transform: scale(1.1);
+            pointer-events: none;
+        }
+
+        .intro-title {
+            font-family: 'Dancing Script', cursive;
+            font-size: clamp(2rem, 8vw, 3.5rem);
+            color: white;
+            text-align: center;
+            padding: 0 20px;
+            line-height: 1.2;
+            margin-bottom: 20px;
+            text-shadow: 0 10px 40px rgba(255, 77, 109, 0.3);
+            letter-spacing: 1px;
+        }
+
+        .intro-subtitle {
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 20px;
+            font-size: 1rem;
+            font-weight: 300;
+            letter-spacing: 0.5px;
+        }
+
+        .tap-btn {
+            margin-top: 40px;
+            padding: 16px 50px;
+            background: linear-gradient(135deg, white, #f0f0f0);
+            color: #0f172a;
+            border-radius: 50px;
+            border: none;
+            font-weight: 700;
+            font-size: 1.05rem;
+            cursor: pointer;
+            box-shadow: 0 20px 60px rgba(255, 255, 255, 0.3);
+            animation: buttonGlow 2.5s infinite;
+            transition: all 0.3s ease;
+            letter-spacing: 0.5px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tap-btn:active {
+            transform: scale(0.95);
+        }
+
+        @keyframes buttonGlow {
+            0%, 100% { box-shadow: 0 20px 60px rgba(255, 255, 255, 0.3), inset 0 0 20px rgba(255, 255, 255, 0.1); }
+            50% { box-shadow: 0 20px 80px rgba(255, 255, 255, 0.5), inset 0 0 30px rgba(255, 255, 255, 0.2); }
+        }
+
+        /* --- MAIN CARD 3D TILT --- */
+        .card-wrapper {
+            width: 90%;
+            max-width: 430px;
+            perspective: 1000px;
+            position: relative;
+            z-index: 11;
+        }
+
+        .card {
+            background: rgba(20, 15, 50, 0.6);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1.5px solid rgba(255, 77, 109, 0.3);
+            border-radius: 28px;
+            padding: 35px 28px;
+            text-align: center;
+            opacity: 0;
+            transform: scale(0.8) translateZ(0);
+            transition: all 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            transform-style: preserve-3d;
+            box-shadow: 0 25px 80px rgba(255, 77, 109, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+        }
+
+        .card.visible {
+            opacity: 1;
+            transform: scale(1) rotateX(0) rotateY(0);
+        }
+
+        .card:hover {
+            box-shadow: 0 35px 120px rgba(255, 77, 109, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+        }
+
+        .date-badge {
+            background: linear-gradient(135deg, rgba(255, 77, 109, 0.3), rgba(255, 143, 163, 0.2));
+            border: 1.2px solid rgba(255, 77, 109, 0.5);
+            color: #ffb3c1;
+            padding: 8px 18px;
+            border-radius: 25px;
+            font-size: 0.85rem;
+            display: inline-block;
+            margin-bottom: 20px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            box-shadow: 0 8px 24px rgba(255, 77, 109, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        /* --- 3D CAROUSEL --- */
+        .carousel-container {
+            perspective: 2000px;
+            width: 100%;
+            height: 380px;
+            position: relative;
+            margin: 15px 0 20px;
+            transform-style: preserve-3d;
+            cursor: grab;
+        }
+
+        .carousel-container:active {
+            cursor: grabbing;
+        }
+
+        .carousel-track {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .slide-card {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            transform-style: preserve-3d;
+            transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.8s ease;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .slide-card.active {
+            opacity: 1;
+            pointer-events: auto;
+            z-index: 10;
+            transform: translateZ(0) scale(1) rotateY(0deg) rotateX(0deg);
+        }
+
+        .slide-card.prev {
+            transform: translateZ(-300px) rotateY(45deg) translateX(-100px) scale(0.7);
+            opacity: 0.3;
+        }
+
+        .slide-card.next {
+            transform: translateZ(-300px) rotateY(-45deg) translateX(100px) scale(0.7);
+            opacity: 0.3;
+        }
+
+        .slide-inner {
+            width: 100%;
+            height: 100%;
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            position: relative;
+        }
+
+        .slide {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            filter: brightness(1) saturate(1.1);
+            transition: filter 0.5s ease;
+        }
+
+        .slide-card.active .slide {
+            filter: brightness(1.05) saturate(1.2);
+        }
+
+        /* --- CAPTION --- */
+        .caption-container {
+            min-height: 50px;
+            margin-top: 18px;
+            position: relative;
+            z-index: 5;
+            color: #ffffff;
+            font-family: 'Dancing Script', cursive;
+            font-size: clamp(1.3rem, 5vw, 1.8rem);
+            text-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+            letter-spacing: 0.5px;
+        }
+
+        .caption {
+            display: none;
+            animation: captionReveal 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .caption.visible { display: block; }
+
+        @keyframes captionReveal {
+            from { opacity: 0; transform: translateY(10px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .swipe-hint {
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.3);
+            margin-top: 8px;
+            font-family: 'Poppins', sans-serif;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        /* --- MUSIC EQUALIZER --- */
+        .music-equalizer {
+            display: flex;
+            gap: 4px;
+            justify-content: center;
+            align-items: flex-end;
+            height: 20px;
+            margin: 15px 0;
+        }
+
+        .equalizer-bar {
+            width: 3px;
+            background: linear-gradient(180deg, #ff4d6d, #ff8fa3);
+            border-radius: 2px;
+            animation: equalizerPulse 0.6s ease-in-out infinite;
+            box-shadow: 0 0 10px rgba(255, 77, 109, 0.4);
+        }
+
+        .equalizer-bar:nth-child(1) { animation-delay: 0s; height: 40%; }
+        .equalizer-bar:nth-child(2) { animation-delay: 0.1s; height: 60%; }
+        .equalizer-bar:nth-child(3) { animation-delay: 0.2s; height: 80%; }
+        .equalizer-bar:nth-child(4) { animation-delay: 0.1s; height: 60%; }
+        .equalizer-bar:nth-child(5) { animation-delay: 0s; height: 40%; }
+
+        @keyframes equalizerPulse {
+            0%, 100% { height: 40%; }
+            50% { height: 100%; }
+        }
+
+        /* --- LETTER BUTTON --- */
+        .open-letter-btn {
+            background: linear-gradient(135deg, #ff4d6d 0%, #ff8fa3 100%);
+            color: white;
+            border: none;
+            padding: 14px 36px;
+            border-radius: 50px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 15px;
+            box-shadow: 0 15px 45px rgba(255, 77, 109, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.1);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            font-size: 1rem;
+            letter-spacing: 0.5px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .open-letter-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .open-letter-btn:hover::before {
+            left: 100%;
+        }
+
+        .open-letter-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 25px 65px rgba(255, 77, 109, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.15);
+        }
+
+        .open-letter-btn:active {
+            transform: translateY(-1px) scale(0.98);
+        }
+
+        /* --- LETTER MODAL --- */
+        #letter-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0);
+            backdrop-filter: blur(0px);
+            z-index: 3000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            opacity: 0;
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        #letter-modal.active {
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(12px);
+            opacity: 1;
+        }
+
+        .letter-content {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f8f8 100%);
+            color: #1a1a1a;
+            padding: 45px 40px;
+            border-radius: 20px;
+            max-width: 550px;
+            line-height: 1.8;
+            position: relative;
+            animation: letterReveal 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 50px 150px rgba(0, 0, 0, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(255, 77, 109, 0.15);
+            transform: scale(0.9);
+            opacity: 0;
+        }
+
+        #letter-modal.active .letter-content {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        @keyframes letterReveal {
+            from { transform: scale(0.8) translateY(-30px); opacity: 0; filter: blur(10px); }
+            to { transform: scale(1) translateY(0); opacity: 1; filter: blur(0); }
+        }
+
+        .letter-content h2 {
+            font-family: 'Dancing Script', cursive;
+            color: #ff4d6d;
+            margin-bottom: 25px;
+            font-size: 2rem;
+            letter-spacing: 0.5px;
+        }
+
+        .letter-content p {
+            margin-bottom: 15px;
+            color: #333;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+        }
+
+        .typed-text {
+            border-right: 2px solid #ff4d6d;
+            padding-right: 5px;
+            animation: typingCursor 0.7s infinite;
+        }
+
+        @keyframes typingCursor {
+            0%, 49%, 100% { border-right-color: #ff4d6d; }
+            50%, 99% { border-right-color: transparent; }
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 20px; right: 25px;
+            font-size: 2rem;
+            cursor: pointer;
+            color: #ff4d6d;
+            transition: all 0.3s ease;
+            font-weight: 300;
+            line-height: 1;
+        }
+
+        .close-btn:hover {
+            color: #ff4d6d;
+            transform: scale(1.3) rotate(90deg);
+        }
+
+        /* --- UTILITIES --- */
+        @keyframes pulse { 
+            0% { transform: scale(1); } 
+            50% { transform: scale(1.05); } 
+            100% { transform: scale(1); } 
+        }
+
+        .hidden { display: none !important; }
+
+        /* --- SCROLLBAR STYLING --- */
+        .letter-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .letter-content::-webkit-scrollbar-track {
+            background: rgba(255, 77, 109, 0.1);
+            border-radius: 3px;
+        }
+
+        .letter-content::-webkit-scrollbar-thumb {
+            background: rgba(255, 77, 109, 0.4);
+            border-radius: 3px;
+        }
+
+        .letter-content::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 77, 109, 0.6);
+        }
+
+        /* --- RESPONSIVE --- */
+        @media (max-width: 768px) {
+            .intro-title { font-size: 2rem; }
+            .card { padding: 25px 20px; }
+            .carousel-container { height: 320px; }
+            .slide-card.prev { transform: translateZ(-200px) rotateY(35deg) translateX(-80px) scale(0.75); }
+            .slide-card.next { transform: translateZ(-200px) rotateY(-35deg) translateX(80px) scale(0.75); }
+            .letter-content { padding: 35px 30px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Canvas for particle system -->
+    <canvas id="particle-canvas"></canvas>
+    
+    <!-- Background overlay -->
+    <div class="bg-overlay"></div>
+    <div class="noise-overlay"></div>
+
+    <!-- Audio -->
+    <audio id="bg-music" loop volume="0.4">
+        <source src="https://pixabay.com/music/download/music-114672.mp3" type="audio/mp3">
+    </audio>
+
+    <!-- Intro Screen -->
+    <div id="intro-screen">
+        <h1 class="intro-title">For Riga...<br><span style="font-size: 1.2rem; font-family: 'Poppins'; font-weight: 400; margin-top: 10px; display: block;">Since I can't give you a real gift yet...</span></h1>
+        <p class="intro-subtitle">Turn up the volume 🎵</p>
+        <button class="tap-btn" onclick="startApp()">Tap to Open</button>
+    </div>
+
+    <!-- Main Scene -->
+    <div class="scene-container">
+        <div class="card-wrapper">
+            <div class="card" id="main-card">
+                <div class="date-badge">Happy Valentine's Day ❤️</div>
+                
+                <!-- 3D Carousel -->
+                <div class="carousel-container" id="carousel">
+                    <div class="carousel-track" id="carousel-track">
+                        <!-- Slides will be injected here -->
+                    </div>
+                </div>
+
+                <div class="caption-container" id="caption-box"></div>
+                <div class="swipe-hint">swipe left/right or tap to change</div>
+
+                <!-- Equalizer -->
+                <div class="music-equalizer">
+                    <div class="equalizer-bar"></div>
+                    <div class="equalizer-bar"></div>
+                    <div class="equalizer-bar"></div>
+                    <div class="equalizer-bar"></div>
+                    <div class="equalizer-bar"></div>
+                </div>
+
+                <button class="open-letter-btn" onclick="openLetter()">Read Note 💌</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Letter Modal -->
+    <div id="letter-modal" onclick="closeLetter(event)">
+        <div class="letter-content" onclick="event.stopPropagation()">
+            <span class="close-btn" onclick="closeLetter()">&times;</span>
+            <h2>To my favorite person,</h2>
+            <p id="letter-text"></p>
+            <p style="text-align:right; margin-top:30px; font-weight:600; font-size:0.9rem; color:#ff4d6d;">- Ledion</p>
+        </div>
+    </div>
+
+    <script>
+        // ========================================
+        // PARTICLE SYSTEM WITH CANVAS
+        // ========================================
+        class ParticleSystem {
+            constructor() {
+                this.canvas = document.getElementById('particle-canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.particles = [];
+                this.mouseX = window.innerWidth / 2;
+                this.mouseY = window.innerHeight / 2;
+                
+                this.resizeCanvas();
+                this.startAnimation();
+                this.setupEventListeners();
+            }
+
+            resizeCanvas() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+
+            setupEventListeners() {
+                window.addEventListener('resize', () => this.resizeCanvas());
+                document.addEventListener('mousemove', (e) => {
+                    this.mouseX = e.clientX;
+                    this.mouseY = e.clientY;
+                });
+                document.addEventListener('touchmove', (e) => {
+                    if (e.touches.length > 0) {
+                        this.mouseX = e.touches[0].clientX;
+                        this.mouseY = e.touches[0].clientY;
+                    }
+                });
+            }
+
+            createParticles() {
+                if (this.particles.length < 80) {
+                    for (let i = 0; i < 3; i++) {
+                        this.particles.push({
+                            x: Math.random() * this.canvas.width,
+                            y: Math.random() * this.canvas.height,
+                            vx: (Math.random() - 0.5) * 1,
+                            vy: (Math.random() - 0.5) * 1 - 0.5,
+                            size: Math.random() * 2.5 + 0.5,
+                            opacity: Math.random() * 0.5 + 0.2,
+                            color: ['#ff4d6d', '#ff8fa3', '#ffffff'][Math.floor(Math.random() * 3)]
+                        });
+                    }
+                }
+            }
+
+            update() {
+                this.particles.forEach((p, idx) => {
+                    // Gravity
+                    p.vy -= 0.05;
+                    p.x += p.vx;
+                    p.y += p.vy;
+
+                    // Attraction to mouse
+                    const dx = this.mouseX - p.x;
+                    const dy = this.mouseY - p.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (dist < 250) {
+                        const force = 0.001 * (250 - dist) / 250;
+                        p.vx += dx * force;
+                        p.vy += dy * force;
+                    }
+
+                    // Boundary wrapping
+                    if (p.x > this.canvas.width) p.x = 0;
+                    if (p.x < 0) p.x = this.canvas.width;
+                    if (p.y > this.canvas.height) p.y = 0;
+                    if (p.y < 0) p.y = this.canvas.height;
+
+                    // Fade out
+                    p.opacity = Math.max(0, p.opacity - 0.002);
+                    if (p.opacity <= 0) this.particles.splice(idx, 1);
+                });
+            }
+
+            draw() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                this.particles.forEach(p => {
+                    this.ctx.fillStyle = p.color;
+                    this.ctx.globalAlpha = p.opacity;
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+
+                // Draw connections
+                this.ctx.globalAlpha = 0.1;
+                this.ctx.strokeStyle = '#ff4d6d';
+                for (let i = 0; i < this.particles.length; i++) {
+                    for (let j = i + 1; j < this.particles.length; j++) {
+                        const dx = this.particles[i].x - this.particles[j].x;
+                        const dy = this.particles[i].y - this.particles[j].y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (dist < 150) {
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(this.particles[i].x, this.particles[i].y);
+                            this.ctx.lineTo(this.particles[j].x, this.particles[j].y);
+                            this.ctx.stroke();
+                        }
+                    }
+                }
+
+                this.ctx.globalAlpha = 1;
+            }
+
+            startAnimation() {
+                const animate = () => {
+                    this.createParticles();
+                    this.update();
+                    this.draw();
+                    requestAnimationFrame(animate);
+                };
+                animate();
+            }
+        }
+
+        let particleSystem;
+
+        // ========================================
+        // 3D CARD TILT EFFECT
+        // ========================================
+        const cardWrapper = document.querySelector('.card-wrapper');
+        const card = document.getElementById('main-card');
+
+        document.addEventListener('mousemove', (e) => {
+            if (!card.classList.contains('visible')) return;
+            
+            const rect = cardWrapper.getBoundingClientRect();
+            const x = e.clientX - rect.left - rect.width / 2;
+            const y = e.clientY - rect.top - rect.height / 2;
+            
+            const rotateX = (y / rect.height) * 15;
+            const rotateY = -(x / rect.width) * 15;
+            
+            cardWrapper.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+        });
+
+        document.addEventListener('mouseleave', () => {
+            cardWrapper.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg)';
+        });
+
+        // Device orientation for mobile
+        if (typeof DeviceOrientationEvent !== 'undefined') {
+            window.addEventListener('deviceorientation', (event) => {
+                const alpha = event.alpha; // Z
+                const beta = event.beta;   // X
+                const gamma = event.gamma; // Y
+
+                const rotateX = (beta / 90) * 20;
+                const rotateY = -(gamma / 90) * 20;
+                
+                cardWrapper.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+            });
+        }
+
+        // ========================================
+        // 3D CAROUSEL / SWIPE
+        // ========================================
+        const data = [
+            { img: "https://i.ibb.co/mf78GgR/IMG-0056.jpg", text: "You make hours fly by❤️" },
+            { img: "https://i.ibb.co/kgGcWwXv/IMG-0052.jpg", text: "My favorite view" },
+            { img: "https://i.ibb.co/n83QBpYn/IMG-0129.jpg", text: "Na nuk jena mir" },
+            { img: "https://i.ibb.co/1YRrRxh3/IMG-0135.jpg", text: "Stupid Ahh Team" },
+            { img: "https://i.ibb.co/jkY74j0q/IMG-0187.jpg", text: "Collecting memories..." },
+            { img: "https://i.ibb.co/35wT1FDm/IMG-0189.jpg", text: "You make me smile" },
+            { img: "https://i.ibb.co/Ps2FgkPS/IMG-0193.jpg", text: "My happy place" },
+            { img: "https://i.ibb.co/spJ94y9v/IMG-0199.jpg", text: "Grateful for this" },
+            { img: "https://i.ibb.co/Y4ZfxKps/IMG-3065.jpg", text: "Just you and me" },
+            { img: "https://i.ibb.co/8LQwB0kk/IMG-3066.jpg", text: "67" },
+            { img: "https://i.ibb.co/kgBfcYSH/IMG-3067.jpg", text: "I Love Youuu ❤️" }
+        ];
+
+        let currentIndex = 0;
+        const carousel = document.getElementById('carousel');
+        const carouselTrack = document.getElementById('carousel-track');
+        const captionBox = document.getElementById('caption-box');
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        function initCarousel() {
+            data.forEach((item, index) => {
+                const slideCard = document.createElement('div');
+                slideCard.className = 'slide-card' + (index === 0 ? ' active' : '');
+                slideCard.innerHTML = `
+                    <div class="slide-inner">
+                        <img src="${item.img}" class="slide" alt="Photo ${index}">
+                    </div>
+                `;
+                carouselTrack.appendChild(slideCard);
+
+                const cap = document.createElement('div');
+                cap.innerText = item.text;
+                cap.className = 'caption' + (index === 0 ? ' visible' : '');
+                if (item.text === "Just you and me") {
+                    cap.style.color = '#000';
+                }
+                captionBox.appendChild(cap);
+            });
+        }
+
+        function updateCarousel() {
+            const slides = document.querySelectorAll('.slide-card');
+            slides.forEach((slide, idx) => {
+                slide.classList.remove('active', 'prev', 'next');
+                
+                if (idx === currentIndex) {
+                    slide.classList.add('active');
+                } else if (idx === (currentIndex - 1 + data.length) % data.length) {
+                    slide.classList.add('prev');
+                } else if (idx === (currentIndex + 1) % data.length) {
+                    slide.classList.add('next');
+                }
+            });
+
+            const captions = document.querySelectorAll('.caption');
+            captions.forEach((cap, idx) => {
+                cap.classList.remove('visible');
+                if (idx === currentIndex) {
+                    cap.classList.add('visible');
+                }
+            });
+        }
+
+        function nextSlide() {
+            currentIndex = (currentIndex + 1) % data.length;
+            updateCarousel();
+        }
+
+        function prevSlide() {
+            currentIndex = (currentIndex - 1 + data.length) % data.length;
+            updateCarousel();
+        }
+
+        // Swipe detection
+        carousel.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, false);
+
+        carousel.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        }, false);
+
+        function handleSwipe() {
+            if (touchStartX - touchEndX > 50) {
+                nextSlide();
+            } else if (touchEndX - touchStartX > 50) {
+                prevSlide();
+            }
+        }
+
+        carousel.addEventListener('click', nextSlide);
+
+        // ========================================
+        // LETTER WITH TYPING EFFECT
+        // ========================================
+        const letterText = `I know I can't give you a huge physical gift right now because of how things are with our families, but I wanted to make something just for you—something private that lasts.
+<br><br>
+Even though it's only been two weeks, you've become so special to me. I love your little giggles, those big brown eyes, your cute and small teeth, and your chubby cheeks. But most of all, I love how we can talk about anything like best friends.
+<br><br>
+Those two days we didn't speak were hard, but getting back together just proved how much we belong together. Being with you at school calms me down, even if we have to hide it.
+<br><br>
+Even when you are in a , you are always on my mind. Happy Valentine's Day, Riga. ❤️`;
+
+        function typeText(element, text, speed = 30) {
+            element.innerHTML = '';
+            let index = 0;
+            let buffer = '';
+
+            const type = () => {
+                if (index < text.length) {
+                    const char = text[index];
+                    if (char === '<') {
+                        // Handle HTML tags
+                        const endTag = text.indexOf('>', index);
+                        buffer += text.substring(index, endTag + 1);
+                        index = endTag + 1;
+                    } else {
+                        buffer += char;
+                        index++;
+                    }
+                    element.innerHTML = buffer + '<span class="typed-text"> </span>';
+                    setTimeout(type, speed);
+                } else {
+                    element.innerHTML = buffer;
+                }
+            };
+            type();
+        }
+
+        function openLetter() {
+            const modal = document.getElementById('letter-modal');
+            modal.classList.add('active');
+            typeText(document.getElementById('letter-text'), letterText, 15);
+        }
+
+        function closeLetter(event) {
+            // Allow closing by clicking outside or on close button
+            if (event && event.target.id !== 'letter-modal') return;
+            document.getElementById('letter-modal').classList.remove('active');
+        }
+
+        // ========================================
+        // APP INITIALIZATION
+        // ========================================
+        function startApp() {
+            const introScreen = document.getElementById('intro-screen');
+            introScreen.classList.add('hidden');
+            
+            setTimeout(() => {
+                introScreen.style.display = 'none';
+                document.getElementById('main-card').classList.add('visible');
+                document.getElementById('bg-music').play().catch(e => console.log("Audio requires interaction"));
+                if (!particleSystem) {
+                    particleSystem = new ParticleSystem();
+                }
+            }, 500);
+        }
+
+        // Initialize
+        initCarousel();
+
+    </script>
+</body>
+</html>
